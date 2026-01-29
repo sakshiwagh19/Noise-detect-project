@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Noise Pollution Monitoring</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #f1f1f3; }
+    .box { background: white; padding: 20px; width: 300px; margin: 40px auto; border-radius: 10px; }
+    .high { color: red; font-weight: bold; }
+    .normal { color: green; }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h2>Noise Level</h2>
+    <h1 id="level">0</h1>
+    <h3 id="status" class="normal">Normal</h3>
+  </div>
+
+<script>
+navigator.mediaDevices.getUserMedia({ audio: true })
+.then(stream => {
+
+  const audioContext = new AudioContext();
+  const mic = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+  mic.connect(analyser);
+
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  function detectSound() {
+    analyser.getByteFrequencyData(dataArray);
+
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+
+    let volume = sum / dataArray.length;
+
+    document.getElementById("level").innerText = volume.toFixed(2);
+
+    const status = document.getElementById("status");
+    if (volume > 50) {
+      status.innerText = "High Noise";
+      status.className = "high";
+    } else {
+      status.innerText = "Normal";
+      status.className = "normal";
+    }
+
+    // 🔴 BACKEND KO DATA BHEJNA
+    fetch("http://localhost:3000/api/noise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        level: volume,
+        time: new Date()
+      })
+    });
+
+  }
+
+  setInterval(detectSound, 2000);
+
+})
+.catch(() => alert("Microphone access denied"));
+</script>
+</body>
+</html>
